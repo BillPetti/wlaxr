@@ -1,0 +1,18 @@
+Package: wlaxr
+Type: Package
+Title: Facilitates the acquisition of women's lacrosse data from the NCAA.
+Version: 0.1.0
+Author: Bill Petti <billpetti@gmail.com>
+Maintainer: Bill Petti <billpetti@gmail.com>
+Description: Includes functions for acquiring schedule and game results as well as individual and team statistics.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 3.2.0)
+Imports:
+    dplyr,
+    rvest,
+    magrittr,
+    stringr
+RoxygenNote: 7.1.1
