@@ -2,6 +2,9 @@
 
 export(get_ncaa_wlax_team_schedules)
 export(get_ncaa_wlax_team_stats)
+export(school_lu)
 import(dplyr)
+import(magrittr)
+import(readr)
 import(rvest)
 import(stringr)
