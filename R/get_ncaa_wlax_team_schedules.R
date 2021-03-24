@@ -5,6 +5,7 @@
 #' If you want the 2017-18 season, you would use 2018.
 #'
 #' @import dplyr
+#' @import readr
 #' @import rvest
 #' @import stringr
 #' @return A data frame
@@ -16,6 +17,18 @@ get_ncaa_wlax_team_schedules <- function(team_id,
                                          year) {
 
   year_id <- ncaa_stats_year_lu_table[which(ncaa_stats_year_lu_table$season == year),]$season_id
+
+  team <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
+                                           master_wlax_ncaa_team_lu$year == year),]$school
+
+  conference <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
+                                           master_wlax_ncaa_team_lu$year == year),]$conference
+
+  conference_id <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
+                                           master_wlax_ncaa_team_lu$year == year),]$conference_id
+
+  division <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
+                                                    master_wlax_ncaa_team_lu$year == year),]$division
 
   url <- paste0('http://stats.ncaa.org/team/', team_id, '/', year_id)
 
@@ -35,10 +48,9 @@ get_ncaa_wlax_team_schedules <- function(team_id,
       filter(!is.na(date)|date != '')
 
     payload_df <- payload_df %>%
-      dplyr::mutate(across(everything(), ~ifelse(is.na(.x), 0, .x))) %>%
-      dplyr::mutate(attendance = parse_number(attendance))
+      dplyr::mutate(attendance = readr::parse_number(attendance))
 
-    box_score_slugs <- schedule_test %>%
+    box_score_slugs <- payload_read %>%
       rvest::html_nodes('fieldset .skipMask') %>%
       rvest::html_attr('href') %>%
       as.data.frame() %>%
@@ -80,5 +92,13 @@ get_ncaa_wlax_team_schedules <- function(team_id,
     dplyr::mutate(opponent = unlist(regmatches(payload_df$opponent,
                                                   gregexpr(paste0(distinct_teams, collapse = "|"),
                                                            payload_df$opponent))))
+
+  payload_df <- payload_df %>%
+    mutate(team = team,
+           conference = conference,
+           conference_id = conference_id,
+           division = division) %>%
+    select(team, conference, conference_id, division, everything())
+
   return(payload_df)
 }
