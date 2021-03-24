@@ -1,0 +1,95 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE,
+  fig.path = "README-"
+)
+```
+
+```{r load packages, include=FALSE}
+
+library(tidyverse)
+library(wlaxr)
+
+```
+
+# wlaxr
+
+# `wlaxr` 0.1.0
+
+`wlaxr` is an R package built to make acquiring NCAA Women's Lacrosse data simple.
+
+You can install the package via:
+
+```{r eval=FALSE}
+library(devtools)
+
+devtools::install_github("BillPetti/wlaxr")
+
+```
+
+## Functions
+
+Currently, the package contains two functions:
+
+`get_ncaa_wlax_team_schedules()`: used to acquire game schedule and results for a team in a given year.
+
+`get_ncaaa_wlax_team_stats()`: used to acquire individual- and team-level stats for a team in a given year.
+
+Both of these functions should work on seasons back to 2001-2002.
+
+`school_lu()`: used to quickly lookup school IDs and other information.
+
+## Data
+
+The package contains a few internal data sets to make the user's life easier. 
+
+`master_wlax_ncaa_team_lu`: A data frame that includes school name, ID, conference, conference ID, and division by year. Goes back to 2010. Please note that there are likely some errors where the NCAA has teams listed as either in two divisions or, due to being an Indepedent team, they will appear to be in all three divisions in a single season. I've tried to minimize this by restricting the data to 2010-present, but there are still some duplicates.
+
+`ncaa_stats_year_lu_table`: A helper data set that contains the season codes used by the NCAA
+
+## Usage
+
+First, let's say you are interested in The University of Maryland. You can use the `school_lu` function to find their NCAA stats ID:
+
+```{r}
+
+school_lu(school_name = 'Maryland',
+          school_division = 1)
+
+```
+This returns all records in the `master_wlax_ncaa_team_lu` data set where 'Mayrland' is in the school name and the teams are listed in division 1. You can see that Maryland has switched conferences over the years from the ACC to the Big Ten. We also see that Maryland's `school_id` is 392. We'll need that `school_id` for the rest of the functions.
+
+Next, let's acquire Maryland's schedule for the 2019 season when they won the National Championship:
+
+```{r}
+
+md_2019 <- get_ncaa_wlax_team_schedules(team_id = 392, 
+                                        year = 2019)
+
+md_2019
+```
+
+The function returns a data frame with information about each game played in that season, including opponents, goals for and against, and whether the game was played at home, away, or a neutral site.
+
+Let's say we are interested in Maryland's player stats for that season:
+
+```{r}
+
+md_stats_2019 <- get_ncaa_wlax_team_stats(team_id = 392, 
+                                          year = 2019)
+
+md_stats_2019
+
+```
+
+The function returns a data frame with each individual player, their class, number, etc., and their individual statistics tracked by the NCAA. There are also team and opponent totals.
+
