@@ -53,5 +53,8 @@ get_ncaa_wlax_team_stats <- function(team_id,
                   gs = as.numeric(gs)) %>%
     dplyr::mutate_if(is.numeric, ~ifelse(is.na(.x), 0, .x))
 
+  payload_df <- payload_df %>%
+    filter(player != "TEAM")
+
   return(payload_df)
 }
