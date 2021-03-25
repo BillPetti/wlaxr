@@ -5,6 +5,7 @@
 #' If you want the 2017-18 season, you would use 2018.
 #'
 #' @import dplyr
+#' @import tibble
 #' @import readr
 #' @import rvest
 #' @import stringr
@@ -48,6 +49,7 @@ get_ncaa_wlax_team_schedules <- function(team_id,
       filter(!is.na(date)|date != '')
 
     payload_df <- payload_df %>%
+      dplyr::mutate(attendance = as.character(attendance)) %>%
       dplyr::mutate(attendance = readr::parse_number(attendance))
 
     box_score_slugs <- payload_read %>%
@@ -55,7 +57,26 @@ get_ncaa_wlax_team_schedules <- function(team_id,
       rvest::html_attr('href') %>%
       as.data.frame() %>%
       dplyr::rename(boxscore_url = '.') %>%
-      dplyr::mutate(boxscore_url = paste0('http://stats.ncaa.org/', boxscore_url))
+      dplyr::mutate(boxscore_url = paste0('http://stats.ncaa.org', boxscore_url)) %>%
+      dplyr::filter(grepl('box_score', boxscore_url))
+
+    if(nrow(box_score_slugs) < nrow(payload_df)) {
+
+      row_diff <- abs(nrow(box_score_slugs) - nrow(payload_df))
+
+      empty_table <- tibble::tibble(boxscore_url = rep(NA, row_diff))
+
+      box_score_slugs <- box_score_slugs %>%
+        dplyr::bind_rows(empty_table)
+
+      payload_df <- payload_df %>%
+        dplyr::mutate(boxscore_url = box_score_slugs$boxscore_url)
+
+    } else {
+
+      payload_df <- payload_df %>%
+        dplyr::mutate(boxscore_url = box_score_slugs$boxscore_url)
+    }
 
   } else {
 

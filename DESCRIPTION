@@ -13,6 +13,7 @@ Depends:
 Imports:
     dplyr,
     readr,
+    tibble,
     rvest,
     magrittr,
     stringr
