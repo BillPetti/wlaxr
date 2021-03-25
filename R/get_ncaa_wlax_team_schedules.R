@@ -103,9 +103,10 @@ get_ncaa_wlax_team_schedules <- function(team_id,
     dplyr::mutate(location = ifelse(grepl('^@.*', payload_df$opponent), 'away',
                                     ifelse(!grepl('@', payload_df$opponent), 'home',
                                            'neutral'))) %>%
+    dplyr::mutate(opponent = ifelse(location == 'neutral', gsub('@.*', '', opponent), opponent)) %>%
     dplyr::mutate(opponent = gsub(pattern = '(?<![A-Z])@[A-Z].*',
                                   replacement = '',
-                                  payload_df$opponent, perl = TRUE)) %>%
+                                  .$opponent, perl = TRUE)) %>%
     dplyr::mutate(opponent = gsub('@', '', opponent)) %>%
     dplyr::mutate(opponent = stringr::str_trim(opponent))
 
