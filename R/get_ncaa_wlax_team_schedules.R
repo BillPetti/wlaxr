@@ -23,13 +23,13 @@ get_ncaa_wlax_team_schedules <- function(team_id,
                                            master_wlax_ncaa_team_lu$year == year),]$school
 
   conference <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
-                                           master_wlax_ncaa_team_lu$year == year),]$conference
+                                                 master_wlax_ncaa_team_lu$year == year),]$conference
 
   conference_id <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
-                                           master_wlax_ncaa_team_lu$year == year),]$conference_id
+                                                    master_wlax_ncaa_team_lu$year == year),]$conference_id
 
   division <- master_wlax_ncaa_team_lu[which(master_wlax_ncaa_team_lu$school_id == team_id &
-                                                    master_wlax_ncaa_team_lu$year == year),]$division
+                                               master_wlax_ncaa_team_lu$year == year),]$division
 
   url <- paste0('http://stats.ncaa.org/team/', team_id, '/', year_id)
 
@@ -62,15 +62,16 @@ get_ncaa_wlax_team_schedules <- function(team_id,
 
     if(nrow(box_score_slugs) < nrow(payload_df)) {
 
-      row_diff <- abs(nrow(box_score_slugs) - nrow(payload_df))
-
-      empty_table <- tibble::tibble(boxscore_url = rep(NA, row_diff))
-
-      box_score_slugs <- box_score_slugs %>%
-        dplyr::bind_rows(empty_table)
+      joined_boxscores <- payload_df %>%
+        mutate(row = row_number()) %>%
+        filter(!result %in% c('Ppd', 'Canceled')) %>%
+        bind_cols(box_score_slugs) %>%
+        select(row, boxscore_url)
 
       payload_df <- payload_df %>%
-        dplyr::mutate(boxscore_url = box_score_slugs$boxscore_url)
+        mutate(row = row_number()) %>%
+        left_join(joined_boxscores, by = 'row') %>%
+        select(-row)
 
     } else {
 
@@ -101,8 +102,8 @@ get_ncaa_wlax_team_schedules <- function(team_id,
 
   payload_df <- payload_df %>%
     dplyr::mutate(location = ifelse(grepl('^@.*', payload_df$opponent), 'away',
-                                    ifelse(!grepl('@', payload_df$opponent), 'home',
-                                           'neutral'))) %>%
+                                    ifelse(!grepl('@', payload_df$opponent), 'home', 'neutral'))) %>%
+    dplyr::mutate(location = ifelse(result == "P", 'game postponed', location)) %>%
     dplyr::mutate(opponent = ifelse(location == 'neutral', gsub('@.*', '', opponent), opponent)) %>%
     dplyr::mutate(opponent = gsub(pattern = '(?<![A-Z])@[A-Z].*',
                                   replacement = '',
@@ -111,9 +112,13 @@ get_ncaa_wlax_team_schedules <- function(team_id,
     dplyr::mutate(opponent = stringr::str_trim(opponent))
 
   payload_df <- payload_df %>%
+    dplyr::mutate(opponent = stringr::str_trim(payload_df$opponent)) %>%
+    dplyr::mutate(opponent = gsub('\\(|\\)', '', opponent))
+
+  payload_df <- payload_df %>%
     dplyr::mutate(opponent = unlist(regmatches(payload_df$opponent,
-                                                  gregexpr(paste0(distinct_teams, collapse = "|"),
-                                                           payload_df$opponent))))
+                                               gregexpr(paste0(distinct_teams, collapse = "|"),
+                                                        payload_df$opponent))))
 
   payload_df <- payload_df %>%
     mutate(team = team,

@@ -51,7 +51,8 @@ get_ncaa_wlax_team_stats <- function(team_id,
   payload_df <- payload_df %>%
     dplyr::mutate(gp = as.numeric(gp),
                   gs = as.numeric(gs)) %>%
-    dplyr::mutate_if(is.numeric, ~ifelse(is.na(.x), 0, .x))
+    dplyr::mutate_if(is.numeric, ~ifelse(is.na(.x), 0, .x)) %>%
+    dplyr::mutate(team = gsub('\\(|\\)', '', team))
 
   payload_df <- payload_df %>%
     filter(player != "TEAM")
