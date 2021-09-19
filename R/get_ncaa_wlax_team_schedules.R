@@ -104,6 +104,7 @@ get_ncaa_wlax_team_schedules <- function(team_id,
     dplyr::mutate(location = ifelse(grepl('^@.*', payload_df$opponent), 'away',
                                     ifelse(!grepl('@', payload_df$opponent), 'home', 'neutral'))) %>%
     dplyr::mutate(location = ifelse(result == "P", 'game postponed', location)) %>%
+    dplyr::mutate(location = ifelse(result == "Ppd", 'game postponed', location)) %>%
     dplyr::mutate(opponent = ifelse(location == 'neutral', gsub('@.*', '', opponent), opponent)) %>%
     dplyr::mutate(opponent = gsub(pattern = '(?<![A-Z])@[A-Z].*',
                                   replacement = '',
@@ -129,3 +130,5 @@ get_ncaa_wlax_team_schedules <- function(team_id,
 
   return(payload_df)
 }
+
+get_ncaa_wlax_team_schedules_beta(712, 2020)
