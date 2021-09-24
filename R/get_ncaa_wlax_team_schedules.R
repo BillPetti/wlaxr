@@ -130,5 +130,3 @@ get_ncaa_wlax_team_schedules <- function(team_id,
 
   return(payload_df)
 }
-
-get_ncaa_wlax_team_schedules_beta(712, 2020)
