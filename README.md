@@ -3,7 +3,7 @@
 
 # wlaxr
 
-# `wlaxr` 0.1.0
+# `wlaxr` 0.2.0
 
 `wlaxr` is an R package built to make acquiring NCAA Women’s Lacrosse
 data simple.
