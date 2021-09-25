@@ -1,8 +1,6 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# wlaxr
-
 # `wlaxr` 0.2.0
 
 `wlaxr` is an R package built to make acquiring NCAA Women’s Lacrosse
@@ -11,14 +9,14 @@ data simple.
 You can install the package via:
 
 ``` r
-library(devtools)
+library(devtools)	
 
 devtools::install_github("BillPetti/wlaxr")
 ```
 
 ## Functions
 
-Currently, the package contains two functions:
+Currently, the package contains three functions:
 
 `get_ncaa_wlax_team_schedules()`: used to acquire game schedule and
 results for a team in a given year.
