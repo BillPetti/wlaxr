@@ -120,7 +120,6 @@ get_ncaa_wlax_team_schedules <- function(team_id,
     dplyr::mutate(opponent = unlist(regmatches(payload_df$opponent,
                                                gregexpr(paste0(distinct_teams, collapse = "|"),
                                                         payload_df$opponent))))
-
   payload_df <- payload_df %>%
     mutate(team = team,
            conference = conference,
