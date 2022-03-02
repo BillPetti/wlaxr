@@ -35,97 +35,111 @@ get_ncaa_wlax_team_schedules <- function(team_id,
 
   payload_read <- xml2::read_html(url)
 
+
+
   payload_df <- payload_read %>%
     rvest::html_nodes('table') %>%
     .[2] %>%
     rvest::html_table(fill = TRUE) %>%
     as.data.frame()
 
-  if (year >= 2019) {
+  if (names(payload_df)[1] == "Date") {
 
-    payload_df <- payload_df %>%
-      janitor::clean_names() %>%
-      dplyr::mutate(date = lubridate::mdy(date)) %>%
-      filter(!is.na(date)|date != '')
-
-    payload_df <- payload_df %>%
-      dplyr::mutate(attendance = as.character(attendance)) %>%
-      dplyr::mutate(attendance = readr::parse_number(attendance))
-
-    box_score_slugs <- payload_read %>%
-      rvest::html_nodes('fieldset .skipMask') %>%
-      rvest::html_attr('href') %>%
-      as.data.frame() %>%
-      dplyr::rename(boxscore_url = '.') %>%
-      dplyr::mutate(boxscore_url = paste0('http://stats.ncaa.org', boxscore_url)) %>%
-      dplyr::filter(grepl('box_score', boxscore_url))
-
-    if(nrow(box_score_slugs) < nrow(payload_df)) {
-
-      joined_boxscores <- payload_df %>%
-        mutate(row = row_number()) %>%
-        filter(!result %in% c('Ppd', 'Canceled')) %>%
-        bind_cols(box_score_slugs) %>%
-        select(row, boxscore_url)
-
-      payload_df <- payload_df %>%
-        mutate(row = row_number()) %>%
-        left_join(joined_boxscores, by = 'row') %>%
-        select(-row)
-
-    } else {
-
-      payload_df <- payload_df %>%
-        dplyr::mutate(boxscore_url = box_score_slugs$boxscore_url)
-    }
-
-  } else {
-
-    names(payload_df) <- payload_df[2,]
-
-    payload_df <- payload_df[-c(1:2),]
-
-    payload_df <- payload_df %>%
-      janitor::clean_names() %>%
-      dplyr::mutate(date = lubridate::mdy(date))
-
-    payload_df <- payload_df %>%
-      dplyr::mutate(attendance = NA) %>%
-      dplyr::mutate(attendance = as.numeric(attendance))
-
+    sched_html <- payload_read %>%
+      rvest::html_elements("fieldset") %>%
+      rvest::html_elements("table")
+    sched_1 <- (payload_read %>%
+                  rvest::html_elements("fieldset") %>%
+                  rvest::html_elements("table")) [[1]] %>%
+      rvest::html_elements("tr")
+    sched_1 <- sched_1[2:length(sched_1)]
+    sched_1 <- sched_1[c(seq(1,length(sched_1),2))]
+    sched <- sched_html %>%
+      rvest::html_table() %>%
+      as.data.frame()
+    sched <- sched %>%
+      dplyr::filter(.data$Date != "") %>%
+      dplyr::select(-dplyr::any_of("Attendance"))
+  }else{
+    sched_html <- payload_read %>%
+      rvest::html_element("td:nth-child(1) > table")
+    sched_1 <- (payload_read  %>%
+                  rvest::html_element("td:nth-child(1) > table")) %>%
+      rvest::html_elements("tr")
+    sched_1 <- sched_1[3:length(sched_1)]
+    sched <- sched_html %>%
+      rvest::html_table() %>%
+      as.data.frame()
+    colnames(sched) <- c("Date", "Opponent", "Result")
+    sched <- sched[3:nrow(sched),]
   }
 
-  payload_df <- payload_df %>%
-    dplyr::mutate(result = stringr::str_extract_all(payload_df$result, '[A-Z]', simplify = TRUE)[,1]) %>%
-    dplyr::mutate(goals_for = stringr::str_extract_all(payload_df$result, pattern = '[0-9]+', simplify = TRUE)[,1],
-                  goals_against = stringr::str_extract_all(payload_df$result, pattern = '[0-9]+', simplify = TRUE)[,2])
+  sched <- sched %>%
+    dplyr::filter(.data$Date != "")
 
-  payload_df <- payload_df %>%
-    dplyr::mutate(location = ifelse(grepl('^@.*', payload_df$opponent), 'away',
-                                    ifelse(!grepl('@', payload_df$opponent), 'home', 'neutral'))) %>%
-    dplyr::mutate(location = ifelse(result == "P", 'game postponed', location)) %>%
-    dplyr::mutate(location = ifelse(result == "Ppd", 'game postponed', location)) %>%
-    dplyr::mutate(opponent = ifelse(location == 'neutral', gsub('@.*', '', opponent), opponent)) %>%
-    dplyr::mutate(opponent = gsub(pattern = '(?<![A-Z])@[A-Z].*',
+  game_extractor <- function(x){
+    data.frame(slug = ifelse(
+      is.null(
+        (x %>%
+           rvest::html_elements("td:nth-child(3)") %>%
+           rvest::html_elements("a.skipMask"))),
+      NA_character_,
+      (x %>%
+         rvest::html_elements("td:nth-child(3)") %>%
+         rvest::html_elements("a.skipMask")) %>%
+        rvest::html_attr("href")
+    ))
+  }
+
+  slugs <- lapply(sched_1, game_extractor) %>%
+    dplyr::bind_rows()
+
+  sched$opponent_slug <- sched_html %>%
+    rvest::html_elements("td:nth-child(2)")%>%
+    rvest::html_element("a") %>%
+    rvest::html_attr("href")
+
+  sched <- dplyr::bind_cols(sched, slugs)
+  sched <- sched %>%
+    dplyr::filter(!(.data$Result %in% c("Canceled","Ppd"))) %>%
+    dplyr::filter(!(.data$Result == ''))
+
+  sched <- sched %>%
+    dplyr::mutate(result = stringr::str_extract_all(sched$Result, '[A-Z]', simplify = TRUE)[,1])
+
+  sched <- sched %>%
+    dplyr::mutate(goals_for = stringr::str_extract_all(sched$Result, pattern = '[0-9]+', simplify = TRUE)[,1],
+                  goals_against = stringr::str_extract_all(sched$Result, pattern = '[0-9]+', simplify = TRUE)[,2])
+
+  sched <- sched %>%
+    dplyr::mutate(location = ifelse(grepl('^@.*', sched$Opponent), 'away',
+                                    ifelse(!grepl('@', sched$Opponent), 'home', 'neutral'))) %>%
+    dplyr::mutate(location = ifelse(Result == "P", 'game postponed', location)) %>%
+    dplyr::mutate(location = ifelse(Result == "Ppd", 'game postponed', location)) %>%
+    dplyr::mutate(Opponent = ifelse(location == 'neutral', gsub('@.*', '', Opponent), Opponent)) %>%
+    dplyr::mutate(Opponent = gsub(pattern = '(?<![A-Z])@[A-Z].*',
                                   replacement = '',
-                                  .$opponent, perl = TRUE)) %>%
-    dplyr::mutate(opponent = gsub('@', '', opponent)) %>%
-    dplyr::mutate(opponent = stringr::str_trim(opponent))
+                                  .$Opponent, perl = TRUE)) %>%
+    dplyr::mutate(Opponent = gsub('@', '', Opponent)) %>%
+    dplyr::mutate(Opponent = stringr::str_trim(Opponent))
 
-  payload_df <- payload_df %>%
-    dplyr::mutate(opponent = stringr::str_trim(payload_df$opponent)) %>%
-    dplyr::mutate(opponent = gsub('\\(|\\)', '', opponent))
+  sched <- sched %>%
+    dplyr::mutate(Opponent = stringr::str_trim(sched$Opponent)) %>%
+    dplyr::mutate(Opponent = gsub('\\(|\\)', '', Opponent))
 
-  payload_df <- payload_df %>%
-    dplyr::mutate(opponent = unlist(regmatches(payload_df$opponent,
+  sched <- sched %>%
+    dplyr::mutate(Opponent = unlist(regmatches(sched$Opponent,
                                                gregexpr(paste0(distinct_teams, collapse = "|"),
-                                                        payload_df$opponent))))
-  payload_df <- payload_df %>%
+                                                        sched$Opponent))))
+  sched <- sched %>%
+    dplyr::select(-Result) %>%
+    janitor::clean_names() %>%
     mutate(team = team,
            conference = conference,
            conference_id = conference_id,
            division = division) %>%
     select(team, conference, conference_id, division, everything())
 
-  return(payload_df)
+  return(sched)
+
 }
