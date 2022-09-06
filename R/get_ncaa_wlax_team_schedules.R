@@ -35,8 +35,6 @@ get_ncaa_wlax_team_schedules <- function(team_id,
 
   payload_read <- xml2::read_html(url)
 
-
-
   payload_df <- payload_read %>%
     rvest::html_nodes('table') %>%
     .[2] %>%
